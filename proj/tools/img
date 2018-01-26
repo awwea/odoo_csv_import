@@ -1,0 +1,42 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+import csv, re
+import urllib2
+import base64
+import xmlrpclib
+import os.path
+
+# encode path
+#prod_path = 'https://i5.walmartimages.ca/images/Enlarge/007/614/999999-Sscooter845423007614.jpg'
+prod_path = 'origin/img/employee_al-image.jpg'
+
+url = re.findall(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', prod_path)
+
+# get image and convert to base64
+try:
+    if prod_path in url:
+        response = urllib2.urlopen(prod_path)
+        image = response.read()
+        response.close()
+    else:
+        image_file = open(prod_path)
+        image = image_file.read()
+        image_file.close()
+
+    image_base64 = base64.encodestring(image)
+    print(image_base64)
+except UnicodeEncodeError as e:
+    print unicode(e)
+    
+    
+import csv
+from url2filename import url2filename
+import urllib.request
+
+with open('origin/product.csv', 'r') as csvfile:
+    reader = csv.DictReader(csvfile)
+    for row in reader:
+        urls = row['media'] # replace with your column heading
+        filename_prefix = row['ref']  # replace with your column heading
+        filename = url2filename(urls)
+        urllib.request.urlretrieve(urls, filename_prefix + filename)

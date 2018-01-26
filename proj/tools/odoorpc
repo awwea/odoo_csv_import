@@ -1,0 +1,68 @@
+#coding:utf-8
+
+import odoorpc
+import xlrd,base64
+
+#user password 
+db = 'test'
+user ='admin'
+passwd = 'admin'
+
+#connection to odoo server
+odoo = odoorpc.ODOO('your server url',port='8069')
+
+print  ' logining ... '
+odoo.login (db, user, passwd)
+
+print u ' Original Address: cnblogs.com/kfx2007 ... '
+
+user = odoo.env.user
+
+print 'current user:%s'%user.name
+
+print 'reading from excel file...'
+excel = xlrd.open_workbook('123.xls')
+sheet = excel.sheets()[0]
+
+for row in range(1,sheet.nrows):
+    default_code = sheet.cell(row,0).value
+    name = sheet.cell(row,1).value
+    uom_id = 1
+    list_price = sheet.cell(row,3).value
+    type = 'product'
+    sale_ok = True
+    route_ids = [(4,6)]
+    track_all = True
+    sale_delay = 0
+    produce_delay = 0
+
+    val = {
+        'default_code':default_code,
+        'name':name,
+        'uom_id':uom_id,
+        'list_price':list_price,
+        'type':type,
+        'sale_ok':sale_ok,
+        'route_ids':route_ids,
+        'track_all':track_all,
+        'sale_delay':sale_delay,
+        'produce_delay':produce_delay,
+        #'categ_id':599,
+    }
+
+    #get product template obj
+    product_template_obj = odoo.env['product.template']
+    products = product_template_obj.search([('name','=',name)])
+    if len(products):
+        #print products[0]
+        product = product_template_obj.browse(products[0])
+        if not product_template_obj.browse(products[0]).default_code or 'JY' in product_template_obj.browse(products[0]).default_code:
+            print 'actualizing product: %s code...' % product.id
+            product.defautl_code = default_code
+            print product.default_code
+        print 'product exists, skip...'
+        continue
+    #craete new product
+    print 'creating product: %s' % name
+    print 'autor:kevinkong(kfx2007@163.com)'
+    product_template_obj.create(val)
