@@ -1,3 +1,4 @@
+
 '''
 Created on 9 sept. 2016
 
@@ -7,16 +8,20 @@ Created on 9 sept. 2016
 """
     Data formatting tools
 """
+
 def to_xmlid(name):
     return name.replace('.', '_').replace(',', '_').strip()
 
+
 def list_to_xml_id(names):
     return '_'.join([to_xmlid(name) for name in names])
+
 
 def to_m2o(PREFIX, value, default=''):
     if not value:
         return default
     return PREFIX + '.' + to_xmlid(value)
+
 
 def to_m2m(PREFIX, value):
     if not value:
@@ -28,6 +33,7 @@ def to_m2m(PREFIX, value):
             ids.append(PREFIX + '.' + to_xmlid(val))
     return ','.join(ids)
 
+
 def generate_attribute_list(PREFIX, *attributes):
     header = ['id', 'name']
     lines = set()
@@ -35,10 +41,13 @@ def generate_attribute_list(PREFIX, *attributes):
         lines.add((to_m2o(PREFIX, att), att))
     return header, lines
 
+
 """
     Secondary data file helper
 
 """
+
+
 class ReprWrapper(object):
     def __init__(self, repr_str, func):
         self._repr = repr_str
@@ -49,6 +58,7 @@ class ReprWrapper(object):
 
     def __repr__(self):
         return self._repr
+
 
 class AttributeLineDict:
     def __init__(self, attribute_list_ids, id_gen_fun):
@@ -66,7 +76,8 @@ class AttributeLineDict:
                 if not line_dict['attribute_id/id'].get(att):
                     continue
                 template_info = self.data[line_dict['product_tmpl_id/id']]
-                template_info.setdefault(att_id, [line_dict['value_ids/id'][att]]).append(line_dict['value_ids/id'][att])
+                template_info.setdefault(
+                    att_id, [line_dict['value_ids/id'][att]]).append(line_dict['value_ids/id'][att])
         else:
             d = {}
             for att_id, att in self.att_list:
@@ -75,12 +86,22 @@ class AttributeLineDict:
             self.data[line_dict['product_tmpl_id/id']] = d
 
     def generate_line(self):
-        lines_header = ['id', 'product_tmpl_id/id', 'attribute_id/id', 'value_ids/id']
+        lines_header = [
+            'id',
+            'product_tmpl_id/id',
+            'attribute_id/id',
+            'value_ids/id']
         lines_out = []
         for template_id, attributes in self.data.iteritems():
             if not template_id:
                 continue
             for attribute, values in attributes.iteritems():
-                line = [self.id_gen(template_id, attributes), template_id, attribute, ','.join(values)]
+                line = [
+                    self.id_gen(
+                        template_id,
+                        attributes),
+                    template_id,
+                    attribute,
+                    ','.join(values)]
                 lines_out.append(line)
         return lines_header, lines_out

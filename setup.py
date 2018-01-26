@@ -20,7 +20,8 @@ from setuptools import setup, find_packages
 
 setup(name='odoo-import-export-client',
       version='1.1.0',
-      install_requires=['openerp-client-lib'],
+      install_requires=['openerp-client-lib>=1.1.2'],
+      dependency_links = ['https://github.com/nicolas-van/openerp-client-lib#egg=openerp-client-lib'],
       description='Library and script that allow to export and import data to Odoo using rpc api.',
       author='Thibault Francois',
       author_email='thibault@françois.be',

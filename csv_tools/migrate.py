@@ -5,7 +5,7 @@ Created on 27 déc. 2016
 
 @author: Thibault Francois
 '''
-from lib.transform import Processor
+from . lib.transform import Processor
 from export_threaded import export_data
 from import_threaded import import_data
 

@@ -1,39 +1,40 @@
-#-*- coding: utf-8 -*-
-'''
-Created on 10 sept. 2016
 
-@author: mythrys
-'''
+"""
+    Created on 10 sept. 2016
+    @author: mythrys
+"""
+
 import os
-
 from collections import OrderedDict
 
-from internal.csv_reader import UnicodeReader
-from internal.tools import ReprWrapper, AttributeLineDict
-from odoo_csv_tools.lib.internal.io import write_file
-from internal.exceptions import SkippingException
-import mapper
+from .internal.csv_reader import UnicodeReader
+from .internal.tools import ReprWrapper, AttributeLineDict
+from .internal.io import write_file
+from .internal.exceptions import SkippingException
+from . import mapper
 
 
 class Processor(object):
-    def __init__(self, filename=None, delimiter=";", encoding='utf-8-sig', header=None, data=None, preprocess=lambda header, data: (header, data)):
+
+    def __init__(self, filename=None, delimiter=';', encoding='utf-8-sig', header=None, data=None, preprocess=lambda header, data: (header, data)):
         self.file_to_write = OrderedDict()
         if header and data:
             self.header = header
             self.data = data
         elif filename:
-            self.header, self.data = self.__read_file(filename, delimiter, encoding)
+            self.header, self.data = self.__read_file(
+                filename, delimiter, encoding)
         else:
-            raise Exception("No Filename nor header and data provided")
+            raise Exception('No Filename nor header and data provided')
         self.header, self.data = preprocess(self.header, self.data)
 
     def check(self, check_fun, message=None):
         res = check_fun(self.header, self.data)
         if not res:
             if message:
-                print message
+                print(message)
             else:
-                print "%s failed" % check_fun.__name__
+                print('%s failed' % check_fun.__name__)
         return res
 
     def split(self, split_fun):
@@ -53,7 +54,6 @@ class Processor(object):
 
         :return: a dict where the key is a str and the value a mapper.val function,
                  the key and the field pass to the mapper are identical
-
                 {
                     'id' : mapper.val('id'),
                     .....
@@ -61,7 +61,7 @@ class Processor(object):
         """
         mapping = {}
         for column in self.header:
-            map_val_rep = ReprWrapper("mapper.val('%s')" %column, mapper.val(column))
+            map_val_rep = ReprWrapper('mapper.val("%s")' % column, mapper.val(column))
             mapping[str(column)] = map_val_rep
         return mapping
 
@@ -77,32 +77,27 @@ class Processor(object):
         init = not append
         for _, info in self.file_to_write.items():
             info_copy = dict(info)
-            info_copy.update({
-                'model' : info.get('model', 'auto'),
-                'init' : init,
-                'launchfile' : script_filename,
-                'fail' : fail,
-                'python_exe' : python_exe,
-                'path' : path,
-            })
-
+            info_copy.update({'model': info.get('model', 'auto'), 'init': init, 'launchfile': script_filename, 'fail': fail, 'python_exe': python_exe, 'path': path})
             write_file(**info_copy)
             init = False
+
 
     def get_processed_data(self, filename_out):
         return self.file_to_write[filename_out]
 
+
     ########################################
-    #                                      #
     #            Private Method            #
-    #                                      #
     ########################################
+
+
     def __read_file(self, filename, delimiter, encoding):
-        file_ref = open(filename, 'r')
-        reader = UnicodeReader(file_ref, delimiter=delimiter, encoding='utf-8-sig')
-        head = reader.next()
-        data = [d for d in reader]
-        return head, data
+        with open(filename, 'r') as file_ref:
+            reader = UnicodeReader(file_ref, delimiter=delimiter, encoding='utf-8-sig')
+            head = reader.next()
+            data = [d for d in reader]
+            return head, data
+
 
     def __process_mapping(self, mapping, t, null_values, verbose):
         """
@@ -110,26 +105,24 @@ class Processor(object):
         """
         lines_out = [] if t == 'list' else set()
         for i, line in enumerate(self.data):
-            line = [s.strip() if s and s.strip() not in null_values else '' for s in line]
+            line = [s.strip() if s and s.strip()
+                    not in null_values else '' for s in line]
             line_dict = dict(zip(self.header, line))
             try:
                 line_out = [mapping[k](line_dict) for k in mapping.keys()]
             except SkippingException as e:
                 if verbose:
-                    print "Skipping", i
-                    print e.message
+                    print('Skipping', i)
+                    print(e.message)
                 continue
             if t == 'list':
                 lines_out.append(line_out)
             else:
                 lines_out.add(tuple(line_out))
-
         return mapping.keys(), lines_out
 
-    def __process_mapping_m2m(self, mapping, null_values, verbose):
-        """
 
-        """
+    def __process_mapping_m2m(self, mapping, null_values, verbose):
         head, data = self.__process_mapping(mapping, 'list', null_values, verbose)
         lines_out = set()
         for line_out in data:
@@ -145,8 +138,8 @@ class Processor(object):
                 for i, val in enumerate(values):
                     new_line[index_list[i]] = val
                 lines_out.add(tuple(new_line))
-
         return head, lines_out
+
 
     def _add_data(self, head, data, filename_out, import_args):
         import_args = dict(import_args)
@@ -157,9 +150,11 @@ class Processor(object):
 
 
 class ProductProcessorV9(Processor):
+
     def __generate_attribute_data(self, attributes_list, ATTRIBUTE_PREFIX):
-            self.attr_header = ['id', 'name']
-            self.attr_data = [[mapper.to_m2o(ATTRIBUTE_PREFIX, att), att] for att in attributes_list]
+        self.attr_header = ['id', 'name']
+        self.attr_data = [[mapper.to_m2o(ATTRIBUTE_PREFIX, att), att] for att in attributes_list]
+
 
     def process_attribute_mapping(self, mapping, line_mapping, attributes_list, ATTRIBUTE_PREFIX, path, import_args, id_gen_fun=None, null_values=['NULL']):
         """
@@ -172,7 +167,9 @@ class ProductProcessorV9(Processor):
                     line_value = [ele[att] if isinstance(ele, dict) else ele for ele in line]
                     values_out.add(tuple(line_value))
 
-        id_gen_fun = id_gen_fun or (lambda template_id, values : mapper.to_m2o(template_id.split('.')[0] + '_LINE', template_id))
+        id_gen_fun = id_gen_fun or (
+            lambda template_id,
+            values: mapper.to_m2o(template_id.split('.')[0] + '_LINE', template_id))
 
         values_header = mapping.keys()
         values_data = set()
@@ -183,7 +180,6 @@ class ProductProcessorV9(Processor):
             line = [s.strip() if s.strip() not in null_values else '' for s in line]
             line_dict = dict(zip(self.header, line))
             line_out = [mapping[k](line_dict) for k in mapping.keys()]
-
             add_value_line(values_data, line_out)
             values_lines = [line_mapping[k](line_dict) for k in line_mapping.keys()]
             att_data.add_line(values_lines, line_mapping.keys())
@@ -196,6 +192,7 @@ class ProductProcessorV9(Processor):
         self._add_data(values_header, values_data, path + 'product.attribute.value.csv', import_args)
         import_args = dict(import_args, groupby='product_tmpl_id/id')
         self._add_data(line_header, line_data, path + 'product.attribute.line.csv', import_args)
+
 
 class ProductProcessorV10(Processor):
     def process_attribute_data(self, attributes_list, ATTRIBUTE_PREFIX, filename_out, import_args):

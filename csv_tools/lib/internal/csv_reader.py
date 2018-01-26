@@ -1,15 +1,23 @@
 '''
-Created on 16 mai 2014
-
-@author: openerp
+    Created on 16 mai 2014
+    @author: openerp
 '''
-import csv, codecs, cStringIO
+
+try:
+    import io
+except ImportError:
+    import cStringIO as io
+
+import csv
+import codecs
 import threading
+
 
 class UTF8Recoder:
     """
     Iterator that reads an encoded stream and reencodes the input to UTF-8
     """
+
     def __init__(self, f, encoding):
         self.reader = codecs.getreader(encoding)(f)
 
@@ -17,7 +25,8 @@ class UTF8Recoder:
         return self
 
     def next(self):
-        return self.reader.next().encode("utf-8")
+        return self.reader.next().encode('utf-8')
+
 
 class UnicodeReader:
     """
@@ -25,13 +34,13 @@ class UnicodeReader:
     which is encoded in the given encoding.
     """
 
-    def __init__(self, f, dialect=csv.excel, encoding="utf-8", **kwds):
+    def __init__(self, f, dialect=csv.excel, encoding='utf-8', **kwds):
         f = UTF8Recoder(f, encoding)
         self.reader = csv.reader(f, dialect=dialect, **kwds)
 
     def next(self):
         row = self.reader.next()
-        return [unicode(s, "utf-8") for s in row]
+        return [unicode(s, 'utf-8') for s in row]
 
     def __iter__(self):
         return self
@@ -43,9 +52,9 @@ class UnicodeWriter:
     which is encoded in the given encoding.
     """
 
-    def __init__(self, f, dialect=csv.excel, encoding="utf-8", **kwds):
+    def __init__(self, f, dialect=csv.excel, encoding='utf-8', **kwds):
         # Redirect output to a queue
-        self.queue = cStringIO.StringIO()
+        self.queue = io.StringIO()
         self.writer = csv.writer(self.queue, dialect=dialect, **kwds)
         self.stream = f
         self.encoder = codecs.getincrementalencoder(encoding)()
@@ -53,10 +62,12 @@ class UnicodeWriter:
 
     def writerow(self, row):
         self.lock.acquire()
-        self.writer.writerow([str(s) if isinstance(s, bool) else s.encode("utf-8") for s in row])
+        #self.writer.writerow([str(s) if isinstance(s, bool) else s.encode('utf-8') for s in row])
+        values = ['' if isinstance(s, bool) else s.encode('utf-8') for s in row]
+        self.writer.writerow(values)
         # Fetch UTF-8 output from the queue ...
         data = self.queue.getvalue()
-        data = data.decode("utf-8")
+        data = data.decode('utf-8')
         # ... and reencode it into the target encoding
         data = self.encoder.encode(data)
         # write to the target stream

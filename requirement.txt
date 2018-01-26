@@ -1,1 +1,2 @@
-openerp-client-lib==1.1.2
+#openerp-client-lib==1.1.2
+git+git://github.com/nicolas-van/openerp-client-lib#egg=openerp-client-lib

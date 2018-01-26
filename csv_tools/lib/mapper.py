@@ -1,63 +1,73 @@
+
 """
     Mapper
 """
-from internal.tools import to_m2m, to_m2o
-from internal.exceptions import SkippingException
-import base64
+
 import os
+import base64
+
+from .internal.tools import to_m2m, to_m2o
+from .internal.exceptions import SkippingException
+
 
 def str_to_mapper(field):
     if isinstance(field, basestring):
         return val(field)
     return field
 
+
 def list_to_mapper(args):
     return [val(f) if isinstance(f, basestring) else f for f in args]
 
 
 def field(col):
-    """ Return the col name if the col value for the given line is not empty
-    Use for product.attribute mapping
+    """
+        Return the col name if the col value for the given line is not empty. Use for product.attribute mapping
     """
     def field_fun(line):
         return col if line[col] else ''
     return field_fun
+
 
 def const(value):
     def const_fun(line):
         return value
     return const_fun
 
+
 def val(field, default='', postprocess=lambda x: x, skip=False):
     def val_fun(line):
         if not line[field] and skip:
-            raise SkippingException("Missing Value for %s" % field)
+            raise SkippingException('Missing Value for %s' % field)
         return postprocess(line.get(field, default) or default)
     return val_fun
+
 
 def val_fallback(field, fallback_file, default='', postprocess=lambda x: x, skip=False):
     def val_fun(line):
         if not line[field] and not line[fallback_file] and skip:
-            raise SkippingException("Missing Value for %s" % field)
+            raise SkippingException('Missing Value for %s' % field)
         value = line[field] or line[fallback_file] or default
         return postprocess(value)
     return val_fun
 
+
 def val_label(field, default='', postprocess=lambda x: x, skip=False):
     val_m = val(field, default=default, postprocess=postprocess, skip=skip)
     def val_label_fun(line):
-        return "%s : %s" % (field, val_m(line))
+        return '%s : %s' % (field, val_m(line))
     return val_label_fun
+
 
 def concat_mapper(separtor, *mapper):
     def concat_fun(line):
         return separtor.join([m(line) for m in mapper if m(line)])
     return concat_fun
 
+
 def concat_mapper_all(separtor, *mapper):
     """
-        Same as concat mapper, but if one value in the list of value to concat is empty, the all value return is
-        an empty string
+        Same as concat mapper, but if one value in the list of value to concat is empty, the all value return is an empty string
         Use for product.attribute
     """
     def concat_fun(line):
@@ -71,53 +81,59 @@ def concat_mapper_all(separtor, *mapper):
 def concat(separtor, *fields):
     return concat_mapper(separtor, *[val(f) for f in fields])
 
+
 def concat_field(separtor, *fields):
     return concat_mapper(separtor, *[val_label(f) for f in fields])
+
 
 def concat_field_value_m2m(separator, *args):
     def concat_name_value_fun(line):
         return ','.join([separator.join([f, line[f]]) for f in args if line[f]])
     return concat_name_value_fun
 
+
 def map_val(field, mapping, default=''):
-    return val(field, postprocess=lambda x : mapping.get(x, default))
+    return val(field, postprocess=lambda x: mapping.get(x, default))
+
 
 def num(field, default='0.0'):
     return val(field, default, postprocess=lambda x: x.replace(',', '.'))
 
+
 def m2o_map(PREFIX, mapper, default='', skip=False):
     def m2o_fun(line):
         if skip and not mapper(line):
-            raise SkippingException("Missing Value for %s" % mapper(line))
+            raise SkippingException('Missing Value for %s' % mapper(line))
         return to_m2o(PREFIX, mapper(line), default=default)
     return m2o_fun
+
 
 def m2o(PREFIX, field, default='', skip=False):
     def m2o_fun(line):
         if skip and not line[field]:
-            raise SkippingException("Missing Value for %s" % field)
+            raise SkippingException('Missing Value for %s' % field)
         return to_m2o(PREFIX, line[field], default=default)
     return m2o_fun
+
 
 def m2m(PREFIX, *args):
     """
         @param args: list of string that should be included into the m2m field
     """
-    #TODO: add default
+    # TODO: add default
     def m2m_fun(line):
         return ','.join([to_m2m(PREFIX, line[f]) for f in args if line[f]])
     return m2m_fun
+
 
 def m2m_map(PREFIX, mapper):
     """
         @param args: list of string that should be included into the m2m field
     """
-    #TODO: add default
+    # TODO: add default
     def m2m_fun(line):
         return to_m2m(PREFIX, mapper(line))
     return m2m_fun
-
-
 
 
 def bool_val(field, true_vals=[], false_vals=[]):
@@ -129,17 +145,17 @@ def bool_val(field, true_vals=[], false_vals=[]):
         return '1' if line[field] else '0'
     return bool_val_fun
 
+
 def binary(field, path_prefix, skip=False):
     def binary_val(line):
         path = path_prefix + (line[field] or '')
         if not os.path.exists(path) or not line[field]:
             if skip:
-                raise SkippingException("Missing File %s for field %s" % (path, field))
+                raise SkippingException('Missing File %s for field %s' % (path, field))
             return ''
-
-        with open(path, "rb") as image_file:
-                encoded_string = base64.b64encode(image_file.read())
-                image_file.close()
+        with open(path, 'rb') as image_file:
+            encoded_string = base64.b64encode(image_file.read())
+            #image_file.close()
         return encoded_string
     return binary_val
 
@@ -150,26 +166,30 @@ def binary(field, path_prefix, skip=False):
 
 def val_att(att_list):
     def val_att_fun(line):
-        return { att : line[att] for att in att_list if line[att]}
+        return {att: line[att] for att in att_list if line[att]}
     return val_att_fun
+
 
 def m2o_att(PREFIX, att_list):
     def m2o_att_fun(line):
-        return { att : to_m2o(PREFIX, '_'.join([att, line[att]])) for att in att_list if line[att]}
+        return {att: to_m2o(PREFIX, '_'.join([att, line[att]])) for att in att_list if line[att]}
     return m2o_att_fun
+
 
 def m2o_att_name(PREFIX, att_list):
     def m2o_att_fun(line):
-        return { att : to_m2o(PREFIX, att) for att in att_list if line[att]}
+        return {att: to_m2o(PREFIX, att) for att in att_list if line[att]}
     return m2o_att_fun
+
 
 def m2m_attribute_value(PREFIX, *args):
     return m2m_map(PREFIX, concat_field_value_m2m('_', *args))
 
 
 """
-    Mapper that require rpc Connection (conf_lib)
+    Mapper that require RPC Connection (conf_lib)
 """
+
 def database_id_mapper(PREFIX, field, connection, skip=False):
     def database_id_mapper_fun(line):
         res = to_m2o(PREFIX, line[field])
@@ -179,12 +199,14 @@ def database_id_mapper(PREFIX, field, connection, skip=False):
             if rec and rec[0]['res_id']:
                 return str(rec[0]['res_id'])
         if skip:
-            raise SkippingException("%s not found" % res)
+            raise SkippingException('%s not found' % res)
         return ''
     return database_id_mapper_fun
 
+
 def database_id_mapper_fallback(connection, *fields_mapper, **kwargs):
-    skip = kwargs.get("skip")
+    skip = kwargs.get('skip')
+
     def database_id_mapper_fun(line):
         res = [f(line) for f in fields_mapper if f(line)]
         if res:
@@ -194,12 +216,14 @@ def database_id_mapper_fallback(connection, *fields_mapper, **kwargs):
             if rec and rec[0]['res_id']:
                 return str(rec[0]['res_id'])
         if skip:
-            raise SkippingException("%s not found" % res)
+            raise SkippingException('%s not found' % res)
         return ''
     return database_id_mapper_fun
 
+
 def database_id_mapper_fallback_create(connection, model, *fields_mapper, **kwargs):
-    skip = kwargs.get("skip")
+    skip = kwargs.get('skip')
+
     def database_id_mapper_fun(line):
         res = [f(line) for f in fields_mapper if f(line)]
         if res:
@@ -209,25 +233,27 @@ def database_id_mapper_fallback_create(connection, model, *fields_mapper, **kwar
             if rec and rec[0]['res_id']:
                 return str(rec[0]['res_id'])
             else:
-                print "import"
-                connection.get_model(model).load(['id', 'name'], [[res, res]], context={'tracking_disable' : True, 'create_product_variant' : True,})
+                print('Import')
+                connection.get_model(model).load(['id', 'name'], [[res, res]], context={'tracking_disable': True, 'create_product_product': True,})
                 return database_id_mapper_fun(line)
         if skip:
-            raise SkippingException("%s not found" % res)
+            raise SkippingException('%s not found' % res)
         return ''
     return database_id_mapper_fun
 
+    
+# For many2many specific process
 
-
-#For many2many specific process
 def m2m_id_list(PREFIX, *args, **kwargs):
     """
         @param args: list of string that should be included into the m2m field
         @param const_values: constant values that will be add to all line
     """
-    const_values = kwargs.get("const_values", [])
+    const_values = kwargs.get('const_values', [])
+
     def split_m2m_id_fun(line):
-        """ Return a list of unique element (xml_id, name)
+        """
+            Return a list of unique element (xml_id, name)
         """
         map_list = list_to_mapper(args)
         value = ','.join([to_m2m(PREFIX, m(line)) for m in map_list if m(line)] + const_values)
@@ -238,12 +264,14 @@ def m2m_id_list(PREFIX, *args, **kwargs):
         return s
     return split_m2m_id_fun
 
+
 def m2m_value_list(*args, **kwargs):
     """
         @param args: list of string that should be included into the m2m field
         @param const_values: constant values that will be add to all line
     """
-    const_values = kwargs.get("const_values", [])
+    const_values = kwargs.get('const_values', [])
+
     def split_m2m_value_fun(line):
         """ Return a list of unique element value
         """
@@ -258,9 +286,7 @@ def m2m_value_list(*args, **kwargs):
 
 
 ##############################
-#                            #
 #        Split Mapper        #
-#                            #
 ##############################
 
 def split_line_number(line_nb):

@@ -2,3 +2,16 @@
 .project
 .pydevproject
 
+/build/
+
+/dist/
+
+/odoo_import_export_client.egg-info/
+
+/venv/
+
+/tests/conf/
+
+/work/
+
+/ali*/
